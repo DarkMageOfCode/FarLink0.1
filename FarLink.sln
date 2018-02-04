@@ -1,8 +1,12 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26124.0
 MinimumVisualStudioVersion = 15.0.26124.0
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{1E19F85A-1A1E-4430-A1DD-9AAE1BFE1CA3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FarLink.Declarations", "src\FarLink.Declarations\FarLink.Declarations.csproj", "{DFA5DAC6-4CEC-48D1-918D-DE87712B0EA7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -14,5 +18,22 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DFA5DAC6-4CEC-48D1-918D-DE87712B0EA7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DFA5DAC6-4CEC-48D1-918D-DE87712B0EA7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DFA5DAC6-4CEC-48D1-918D-DE87712B0EA7}.Debug|x64.ActiveCfg = Debug|x64
+		{DFA5DAC6-4CEC-48D1-918D-DE87712B0EA7}.Debug|x64.Build.0 = Debug|x64
+		{DFA5DAC6-4CEC-48D1-918D-DE87712B0EA7}.Debug|x86.ActiveCfg = Debug|x86
+		{DFA5DAC6-4CEC-48D1-918D-DE87712B0EA7}.Debug|x86.Build.0 = Debug|x86
+		{DFA5DAC6-4CEC-48D1-918D-DE87712B0EA7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DFA5DAC6-4CEC-48D1-918D-DE87712B0EA7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DFA5DAC6-4CEC-48D1-918D-DE87712B0EA7}.Release|x64.ActiveCfg = Release|x64
+		{DFA5DAC6-4CEC-48D1-918D-DE87712B0EA7}.Release|x64.Build.0 = Release|x64
+		{DFA5DAC6-4CEC-48D1-918D-DE87712B0EA7}.Release|x86.ActiveCfg = Release|x86
+		{DFA5DAC6-4CEC-48D1-918D-DE87712B0EA7}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{DFA5DAC6-4CEC-48D1-918D-DE87712B0EA7} = {1E19F85A-1A1E-4430-A1DD-9AAE1BFE1CA3}
 	EndGlobalSection
 EndGlobal
