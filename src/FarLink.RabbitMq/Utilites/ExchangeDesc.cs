@@ -1,4 +1,5 @@
 ﻿using System;
+using FarLink.Markup.RabbitMq;
 using RabbitLink.Topology;
 
 namespace FarLink.RabbitMq.Utilites
@@ -14,6 +15,32 @@ namespace FarLink.RabbitMq.Utilites
             AutoDelete = autoDelete;
             Delayed = delayed;
             Alternate = alternate;
+        }
+
+        public ExchangeDesc(ExchangeAttribute attr)
+        {
+            if (attr == null) throw new ArgumentNullException(nameof(attr));
+            Name = attr.Name;
+            switch (attr.Kind)
+            {
+                case ExchangeKind.Fanout:
+                    Type = LinkExchangeType.Fanout;
+                    break;
+                case ExchangeKind.Direct:
+                    Type = LinkExchangeType.Direct;
+                    break;
+                /*case ExchangeKind.Topic:
+                    Type = LinkExchangeType.Topic;
+                    break;*/
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            Durable = attr.Durable;
+            AutoDelete = attr.AutoDelete;
+            Delayed = false;
+            Alternate = null;
+
         }
 
         public string Name { get; }
