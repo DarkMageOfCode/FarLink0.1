@@ -30,17 +30,27 @@ type LogFactory(factory : ILoggerFactory) =
                     | LogLevel.Critical -> if isNull ex then logger.LogCritical(template) else logger.LogCritical(EventId(0), ex, template)
                     | _ -> invalidArg "level" "Unknown logging level"
                 member __.With parameters =
-                    let rec wrapLog param  (log : ILog) =
+                    let rec wrapLog param  us fn =
                         let innerProps = param |> Seq.map (fun (p : KeyValuePair<string, obj>) -> p.Key, p.Value) |> Map.ofSeq
                         {
                             new ILog with
                                 member __.Write(level, template, ex) =
-                                    use v = (logger.BeginScope innerProps)
-                                    log.Write(level, template, ex)
+                                    use p = us()
+                                    use v = logger.BeginScope innerProps
+                                    fn(level, template, ex)
                                 member __.With param =
-                                    wrapLog param __
+                                    let combine () =
+                                        let p1 = us()
+                                        let p2 = logger.BeginScope innerProps
+                                        {
+                                            new IDisposable with
+                                                member __.Dispose () =
+                                                    p2.Dispose()
+                                                    p1.Dispose() 
+                                        } 
+                                    wrapLog param combine fn 
                         }
-                    wrapLog parameters __                    
+                    wrapLog parameters (fun () -> { new IDisposable with member __.Dispose () = () }) (__.Write)                    
         }  
         
     interface ILogFactory with
