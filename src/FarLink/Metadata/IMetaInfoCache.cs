@@ -23,70 +23,42 @@ namespace FarLink.Metadata
 
     internal class MetaInfoCache : IMetaInfoCache
     {
-        private readonly Dictionary<Type, List<Func<MemberInfo, IEnumerable<Attribute>>>> _convention =
-            new Dictionary<Type, List<Func<MemberInfo, IEnumerable<Attribute>>>>();
+        private readonly List<Func<MemberInfo, IEnumerable<Attribute>>> _convention =
+            new List<Func<MemberInfo, IEnumerable<Attribute>>>();
 
-        private readonly ConcurrentDictionary<Type, ImmutableDictionary<Type, ImmutableList<Attribute>>> _typeAttributeCache =
-            new ConcurrentDictionary<Type, ImmutableDictionary<Type, ImmutableList<Attribute>>>();
+        private readonly ConcurrentDictionary<Type, ImmutableDictionary<Type, ImmutableList<Attribute>>>
+            _typeAttributeCache =
+                new ConcurrentDictionary<Type, ImmutableDictionary<Type, ImmutableList<Attribute>>>();
 
         private readonly Dictionary<Type, Dictionary<Type, List<Attribute>>> _typeAttributeOverrides =
             new Dictionary<Type, Dictionary<Type, List<Attribute>>>();
+
         private int _locked;
 
-        private readonly ConcurrentDictionary<Type, Type> _masterEvents = new ConcurrentDictionary<Type, Type>(); 
-        
-        
+        private readonly ConcurrentDictionary<Type, Type> _masterEvents = new ConcurrentDictionary<Type, Type>();
+
+
         public T GetEventAttribute<T>(Type type) where T : Attribute
         {
             if (!typeof(IEvent).IsAssignableFrom(type))
                 throw new ArgumentException(
                     $"{type} is not valid event type, must implement interface {typeof(IEvent)}", nameof(type));
             var attr = typeof(T);
-            if (_typeAttributeOverrides.TryGetValue(type, out var overrides))
+            var attrs = _typeAttributeCache.GetOrAdd(type, GetTypeAttributes);
+
+            if (!attrs.TryGetValue(attr, out var lst) || lst.Count == 0)
             {
-                if (overrides.TryGetValue(attr, out var lst))
-                {
-                    if(lst.Count > 1)
-                        throw new InvalidOperationException($"More then one {attr} specified for {type}");
-                    if (lst.Count == 0)
-                        return null;
-                    return (T) lst[0];
-                }
+                var masterEvent = _masterEvents.GetOrAdd(type, _ =>
+                    type.GetInterfaces()
+                        .SingleOrDefault(p => typeof(IEvent).IsAssignableFrom(p) && p != typeof(IEvent)) ??
+                    typeof(IEvent)
+                );
+                return masterEvent != typeof(IEvent) ? GetEventAttribute<T>(masterEvent) : null;
             }
 
-            var attrs = _typeAttributeCache.GetOrAdd(type, 
-                _ => type.GetCustomAttributes()
-                        .GroupBy(p => p.GetType())
-                        .Select(p => (p.Key, ImmutableList.CreateRange(p)))
-                        .ToImmutableDictionary(p => p.Key, p => p.Item2));
-            if (attrs.TryGetValue(attr, out var lst1))
-            {
-                if(lst1.Count > 1)
-                    throw new InvalidOperationException($"More then one {attr} specified for {type}");
-                if (lst1.Count == 0)
-                    return null;
-                return (T) lst1[0];
-            }
-
-            if (_convention.TryGetValue(attr, out var convLst))
-            {
-                foreach (var func in convLst)
-                {
-                    var result = func(type).ToList();
-                    if (result != null && result.Count != 0)
-                    {
-                        if (result.Count > 1)
-                            throw new InvalidOperationException($"More then one {attr} specified for {type}");
-                        return (T) result[0];
-                    }
-                }
-            }
-
-            var masterEvent = _masterEvents.GetOrAdd(type, _ =>
-                type.GetInterfaces()
-                    .SingleOrDefault(p => typeof(IEvent).IsAssignableFrom(p) && p != typeof(IEvent)) ?? typeof(IEvent)
-            );
-            return masterEvent != typeof(IEvent) ? GetEventAttribute<T>(masterEvent) : null;
+            if (lst.Count > 1)
+                throw new InvalidOperationException($"More then one {attr} specified for {type}");
+            return (T) lst[0];
         }
 
         public IEnumerable<T> GetEventAttributes<T>(Type type) where T : Attribute
@@ -95,43 +67,19 @@ namespace FarLink.Metadata
                 throw new ArgumentException(
                     $"{type} is not valid event type, must implement interface {typeof(IEvent)}", nameof(type));
             var attr = typeof(T);
-            if (_typeAttributeOverrides.TryGetValue(type, out var overrides))
-            {
-                if (overrides.TryGetValue(attr, out var lst))
-                {
-                    if (lst.Count == 0)
-                        return null;
-                    return lst.Cast<T>();
-                }
-            }
+            var attrs = _typeAttributeCache.GetOrAdd(type, GetTypeAttributes);
 
-            var attrs = _typeAttributeCache.GetOrAdd(type, 
-                _ => type.GetCustomAttributes()
-                    .GroupBy(p => p.GetType())
-                    .Select(p => (p.Key, ImmutableList.CreateRange(p)))
-                    .ToImmutableDictionary(p => p.Key, p => p.Item2));
-            if (attrs.TryGetValue(attr, out var lst1))
+            if (!attrs.TryGetValue(attr, out var lst) || lst.Count == 0)
             {
-                if (lst1.Count == 0)
-                    return null;
-                return lst1.Cast<T>();
+                var masterEvent = _masterEvents.GetOrAdd(type, _ =>
+                    type.GetInterfaces()
+                        .SingleOrDefault(p => typeof(IEvent).IsAssignableFrom(p) && p != typeof(IEvent)) ??
+                    typeof(IEvent)
+                );
+                return masterEvent != typeof(IEvent) ? GetEventAttributes<T>(masterEvent) : null;
             }
-
-            if (_convention.TryGetValue(attr, out var convLst))
-            {
-                foreach (var func in convLst)
-                {
-                    var result = func(type).ToList();
-                    if (result != null && result.Count > 0)
-                        return result.Cast<T>();
-                }
-            }
-
-            var masterEvent = _masterEvents.GetOrAdd(type, _ =>
-                type.GetInterfaces()
-                    .SingleOrDefault(p => typeof(IEvent).IsAssignableFrom(p) && p != typeof(IEvent)) ?? typeof(IEvent)
-            );
-            return masterEvent != typeof(IEvent) ? GetEventAttributes<T>(masterEvent) : null;
+            
+            return lst.Cast<T>();
         }
 
 
@@ -141,5 +89,42 @@ namespace FarLink.Metadata
         {
             Interlocked.Exchange(ref _locked, 1);
         }
+
+
+        private ImmutableDictionary<Type, ImmutableList<Attribute>> GetTypeAttributes(Type type)
+        {
+            var attributes = _convention.Select(p => p(type)).Where(p => p != null)
+                .SelectMany(p => p)
+                .GroupBy(p => p.GetType())
+                .ToImmutableDictionary(p => p.Key, p =>
+                {
+                    var aType = p.Key?.GetType();
+                    var uAttr = aType.GetCustomAttribute<AttributeUsageAttribute>();
+                    if (uAttr.AllowMultiple)
+                        return ImmutableList.CreateRange(p);
+                    else
+                    {
+                        var last = p.LastOrDefault();
+                        if (last == null)
+                            return ImmutableList.CreateRange(Enumerable.Empty<Attribute>());
+                        else
+                            return ImmutableList.CreateRange(new[] {last});
+                    }
+                });
+
+            var fromAttr = type.GetCustomAttributes()
+                .GroupBy(p => p.GetType())
+                .Select(p => (p.Key, ImmutableList.CreateRange(p)))
+                .ToImmutableDictionary(p => p.Key, p => p.Item2);
+            attributes = attributes.SetItems(fromAttr);
+            if (_typeAttributeOverrides.TryGetValue(type, out var overrides))
+            {
+                attributes.SetItems(overrides.Select(p =>
+                    new KeyValuePair<Type, ImmutableList<Attribute>>(p.Key, p.Value.ToImmutableList())));
+            }
+
+            return attributes;
+        }
     }
+
 }
