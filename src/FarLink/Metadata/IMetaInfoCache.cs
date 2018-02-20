@@ -26,17 +26,76 @@ namespace FarLink.Metadata
         private readonly List<Func<MemberInfo, IEnumerable<Attribute>>> _convention =
             new List<Func<MemberInfo, IEnumerable<Attribute>>>();
 
-        private readonly ConcurrentDictionary<Type, ImmutableDictionary<Type, ImmutableList<Attribute>>>
-            _typeAttributeCache =
-                new ConcurrentDictionary<Type, ImmutableDictionary<Type, ImmutableList<Attribute>>>();
+        private readonly ConcurrentDictionary<MemberInfo, ImmutableDictionary<Type, ImmutableList<Attribute>>>
+            _cache =
+                new ConcurrentDictionary<MemberInfo, ImmutableDictionary<Type, ImmutableList<Attribute>>>(new MemberInfoEqualityComparer());
 
-        private readonly Dictionary<Type, Dictionary<Type, List<Attribute>>> _typeAttributeOverrides =
-            new Dictionary<Type, Dictionary<Type, List<Attribute>>>();
+        private readonly Dictionary<MemberInfo, Dictionary<Type, List<Attribute>>> _overrides =
+            new Dictionary<MemberInfo, Dictionary<Type, List<Attribute>>>(new MemberInfoEqualityComparer());
 
         private int _locked;
 
         private readonly ConcurrentDictionary<Type, Type> _masterEvents = new ConcurrentDictionary<Type, Type>();
 
+
+        private class MemberInfoEqualityComparer : IEqualityComparer<MemberInfo>
+        {
+            public bool Equals(MemberInfo x, MemberInfo y)
+            {
+                if (x == null && y == null)
+                    return true;
+                if (x == null || y == null) return false;
+                if (x.GetType() != y.GetType()) return false;
+                if (x.Name != y.Name) return false;
+                if (x.DeclaringType != y.DeclaringType) return false;
+                switch (x)
+                {
+                    case FieldInfo _:
+                        return true; 
+                    case MethodInfo methodInfo:
+                        var mi = (MethodInfo) y;
+                        var xp = methodInfo.GetParameters();
+                        var yp = mi.GetParameters();
+                        if (xp.Length != yp.Length) return false;
+                        return xp.Zip(yp, (a, b) => (a, b)).All(f => f.a.ParameterType == f.b.ParameterType);
+                    case PropertyInfo _:
+                        return true;
+                    case Type _:
+                        return x == y;
+                    default:
+                        throw new NotSupportedException();
+                }
+                
+            }
+
+            public int GetHashCode(MemberInfo obj)
+            {
+                if(obj == null) return 0;
+                int hc;
+                switch (obj)
+                {
+                    case FieldInfo fieldInfo:
+                        hc = fieldInfo.DeclaringType.GetHashCode();
+                        hc = (hc * 397) ^ fieldInfo.Name.GetHashCode();
+                        return hc;
+                    case MethodInfo methodInfo:
+                        hc = methodInfo.DeclaringType.GetHashCode();
+                        hc = (hc * 397) ^ methodInfo.Name.GetHashCode();
+
+                        return methodInfo.GetParameters()
+                            .Aggregate(hc, (a, v) => (a * 397) ^ v.ParameterType.GetHashCode());
+                    case PropertyInfo propertyInfo:
+                        hc = propertyInfo.DeclaringType.GetHashCode();
+                        hc = (hc * 397) ^ propertyInfo.Name.GetHashCode();
+                        return hc;
+                    case Type type:
+                        return type.GetHashCode();
+                    default:
+                        throw new NotSupportedException();    
+                }
+            }
+        }
+        
 
         public T GetEventAttribute<T>(Type type) where T : Attribute
         {
@@ -44,7 +103,7 @@ namespace FarLink.Metadata
                 throw new ArgumentException(
                     $"{type} is not valid event type, must implement interface {typeof(IEvent)}", nameof(type));
             var attr = typeof(T);
-            var attrs = _typeAttributeCache.GetOrAdd(type, GetTypeAttributes);
+            var attrs = _cache.GetOrAdd(type, GetMemberAttributes);
 
             if (!attrs.TryGetValue(attr, out var lst) || lst.Count == 0)
             {
@@ -67,7 +126,7 @@ namespace FarLink.Metadata
                 throw new ArgumentException(
                     $"{type} is not valid event type, must implement interface {typeof(IEvent)}", nameof(type));
             var attr = typeof(T);
-            var attrs = _typeAttributeCache.GetOrAdd(type, GetTypeAttributes);
+            var attrs = _cache.GetOrAdd(type, GetMemberAttributes);
 
             if (!attrs.TryGetValue(attr, out var lst) || lst.Count == 0)
             {
@@ -91,9 +150,9 @@ namespace FarLink.Metadata
         }
 
 
-        private ImmutableDictionary<Type, ImmutableList<Attribute>> GetTypeAttributes(Type type)
+        private ImmutableDictionary<Type, ImmutableList<Attribute>> GetMemberAttributes(MemberInfo member)
         {
-            var attributes = _convention.Select(p => p(type)).Where(p => p != null)
+            var attributes = _convention.Select(p => p(member)).Where(p => p != null)
                 .SelectMany(p => p)
                 .GroupBy(p => p.GetType())
                 .ToImmutableDictionary(p => p.Key, p =>
@@ -112,12 +171,12 @@ namespace FarLink.Metadata
                     }
                 });
 
-            var fromAttr = type.GetCustomAttributes()
+            var fromAttr = member.GetCustomAttributes()
                 .GroupBy(p => p.GetType())
                 .Select(p => (p.Key, ImmutableList.CreateRange(p)))
                 .ToImmutableDictionary(p => p.Key, p => p.Item2);
             attributes = attributes.SetItems(fromAttr);
-            if (_typeAttributeOverrides.TryGetValue(type, out var overrides))
+            if (_overrides.TryGetValue(member, out var overrides))
             {
                 attributes.SetItems(overrides.Select(p =>
                     new KeyValuePair<Type, ImmutableList<Attribute>>(p.Key, p.Value.ToImmutableList())));
