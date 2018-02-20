@@ -16,7 +16,12 @@ namespace FarLink.Metadata
         IEnumerable<T> GetEventAttributes<T>(Type type) where T : Attribute;
     }
 
-    public class MetaInfoCache : IMetaInfoCache
+    public interface IMetaCacheConfig
+    {
+        
+    }
+
+    internal class MetaInfoCache : IMetaInfoCache
     {
         private readonly Dictionary<Type, List<Func<MemberInfo, IEnumerable<Attribute>>>> _convention =
             new Dictionary<Type, List<Func<MemberInfo, IEnumerable<Attribute>>>>();

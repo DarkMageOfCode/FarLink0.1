@@ -74,8 +74,8 @@ namespace FarLink.RabbitMq.Builders
         public RabbitConfigBuilder Uri(Uri uri)
         {
             if (uri == null) throw new ArgumentNullException(nameof(uri));
-            if(uri.Scheme != "amqp" || uri.Scheme != "amqps")
-                throw new ArgumentException("Uri schema must be amqp", nameof(uri));
+            if(uri.Scheme != "amqp" && uri.Scheme != "amqps")
+                throw new ArgumentOutOfRangeException("Uri schema must be amqp", uri.Scheme, nameof(uri));
             _uri = uri;
             return this;
         }
@@ -84,10 +84,7 @@ namespace FarLink.RabbitMq.Builders
         {
             if (uri == null) throw new ArgumentNullException(nameof(uri));
             var ur = new Uri(uri);
-            if(ur.Scheme != "amqp" || ur.Scheme != "amqps")
-                throw new ArgumentException("Uri schema must be amqp", nameof(uri));
-            _uri = ur;
-            return this;
+            return Uri(ur);
         }
 
         public RabbitConfigBuilder UseBackgroundThreadsForConnection(bool useBackgroundThread)

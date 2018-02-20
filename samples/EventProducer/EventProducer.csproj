@@ -11,6 +11,7 @@
     <PackageReference Include="Serilog.Sinks.Debug" Version="1.0.0" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\FarLink.Json\FarLink.Json.csproj" />
     <ProjectReference Include="..\..\src\FarLink.RabbitMq\FarLink.RabbitMq.csproj" />
     <ProjectReference Include="..\..\src\FarLink\FarLink.csproj" />
   </ItemGroup>

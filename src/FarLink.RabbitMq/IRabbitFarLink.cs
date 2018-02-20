@@ -6,7 +6,7 @@ namespace FarLink.RabbitMq
 {
     public interface IRabbitFarLink 
     {
-        RabbitConfig Config { get; }
+        string AppId { get; }
         ILog Logger { get; }
     }
 }

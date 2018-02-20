@@ -13,7 +13,8 @@ namespace FarLink.RabbitMq.Utilites
         }
         
 
-        public RabbitConfig Config => _link.Config;
         public ILog Logger => _link.Logger;
+
+        public string AppId => _link.AppId;
     }
 }
