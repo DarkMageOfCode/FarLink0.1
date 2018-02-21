@@ -8,28 +8,23 @@ using Newtonsoft.Json.Serialization;
 
 namespace FarLink.Json
 {
-    public class FarLinkJsonSerializer : IPartialSerializer
+    public class FarLinkJsonSerializer : ISerializer
     {
         private readonly JsonSerializerSettings _settings;
 
-        public FarLinkJsonSerializer(JsonSerializerSettings settings)
+        public FarLinkJsonSerializer(JsonSerializerSettings settings = null)
         {
-            _settings = settings;
+            _settings = settings ?? new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() };
         }
 
-        public FarLinkJsonSerializer() : this(new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() })
-        {
-        }
 
         public bool SupportContentType(ContentType contentType) 
             => contentType.MediaType == "application/json" || contentType.MediaType == "text/json";
 
-        public Serialized Serialize(object value, ContentType contentType, params ContentType[] alternativeContentTypes)
+        public (byte[], ContentType) Serialize(object value, ContentType contentType)
         {
             var ct = contentType;
             if (!SupportContentType(contentType))
-                contentType = alternativeContentTypes.FirstOrDefault(SupportContentType);
-            if(contentType == null)
                 throw new UnknownContentTypeException(ct);
             string text;
             try
@@ -43,12 +38,11 @@ namespace FarLink.Json
 
             var charset = contentType.CharSet;
             if (string.IsNullOrWhiteSpace(charset)) charset = "utf-8";
-            ct = new ContentType(contentType.ToString());
-            ct.CharSet = charset;
+            ct = new ContentType(contentType.ToString()) {CharSet = charset};
             try
             {
                 var encoding = Encoding.GetEncoding(charset);
-                return new Serialized(encoding.GetBytes(text), ct, null);
+                return (encoding.GetBytes(text), ct);
             }
             catch (Exception ex)
             {
@@ -56,7 +50,7 @@ namespace FarLink.Json
             }
         }
 
-        public object Deserialize(Serialized data, Type awaitedType, params Type[] alternativeTypes)
+        public object Deserialize(Serialized data, Type awaitedType)
         {
             throw new NotImplementedException();
         }

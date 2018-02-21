@@ -60,7 +60,7 @@ namespace FarLink.RabbitMq.Utilites
         public void Dispose()
         {
             if(Interlocked.CompareExchange(ref _disposed, 1, 1) == 1) return;
-            SpinWait.SpinUntil(() => Interlocked.CompareExchange(ref _usageCount, 0, 0) != 0);
+            SpinWait.SpinUntil(() => Interlocked.CompareExchange(ref _usageCount, 0, 0) == 0);
             foreach (var item in _dictionary)
             {
                 item.Value.Item2.Dispose();

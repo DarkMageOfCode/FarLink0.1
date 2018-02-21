@@ -20,7 +20,7 @@ namespace FarLink.RabbitMq
             var builder = new RabbitConfigBuilder();
             configure?.Invoke(builder);
             collection.AddSingleton(sp =>
-                new RabbitFarLink(builder.Build(), sp.GetService<ILog<RabbitFarLink>>(), sp.GetService<IMetaInfoCache>(), sp.GetService<ISerializer>()));
+                new RabbitFarLink(builder.Build(), sp.GetService<ILog<RabbitFarLink>>(), sp.GetService<IMetaInfoCache>(), sp.GetService<ISerializationService>()));
             collection.TryAddTransient<IRabbitFarLink>(sp => new RabbitFarLinkAdapter(sp.GetService<RabbitFarLink>()));
             
             return collection;
@@ -33,7 +33,7 @@ namespace FarLink.RabbitMq
                 throw new ArgumentException("Value cannot be null or whitespace.", nameof(appId));
             linkFactory = linkFactory ?? (sp => sp.GetService<ILink>());
             collection.AddSingleton(sp =>
-                new RabbitFarLink(linkFactory(sp), appId, sp.GetService<ILog<RabbitFarLink>>(), sp.GetService<IMetaInfoCache>(), sp.GetService<ISerializer>()));
+                new RabbitFarLink(linkFactory(sp), appId, sp.GetService<ILog<RabbitFarLink>>(), sp.GetService<IMetaInfoCache>(), sp.GetService<ISerializationService>()));
             collection.TryAddTransient<IRabbitFarLink>(sp => new RabbitFarLinkAdapter(sp.GetService<RabbitFarLink>()));
             
             return collection;

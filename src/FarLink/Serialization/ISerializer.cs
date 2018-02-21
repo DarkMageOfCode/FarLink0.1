@@ -3,9 +3,10 @@ using System.Net.Mime;
 
 namespace FarLink.Serialization
 {
-    public interface ISerializer
+    public interface ISerializer 
     {
-        Serialized Serialize(object value, ContentType contentType, params ContentType[] alternativeContentTypes);
-        object Deserialize(Serialized data, Type awaitedType, params Type[] alternativeTypes);
+        bool SupportContentType(ContentType contentType);
+        (byte[], ContentType) Serialize(object value, ContentType contentType);
+        object Deserialize(Serialized data, Type awaitedType);
     }
 }

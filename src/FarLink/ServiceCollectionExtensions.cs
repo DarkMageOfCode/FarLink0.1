@@ -22,9 +22,9 @@ namespace FarLink
             return registrations;
         }
 
-        public static IServiceCollection AddSerializer(this IServiceCollection registrations, ISerializer serializer)
+        public static IServiceCollection AddSerializer(this IServiceCollection registrations, ISerializationService serializationService)
         {
-            registrations.AddSingleton(serializer);
+            registrations.AddSingleton(serializationService);
             return registrations;
         }
     }

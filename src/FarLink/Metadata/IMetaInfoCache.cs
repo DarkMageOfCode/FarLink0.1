@@ -14,6 +14,7 @@ namespace FarLink.Metadata
     {
         T GetEventAttribute<T>(Type type) where T : Attribute;
         IEnumerable<T> GetEventAttributes<T>(Type type) where T : Attribute;
+        IEnumerable<T> GetTypeAttributes<T>(Type type) where T : Attribute;
     }
 
     public interface IMetaCacheConfig
@@ -95,7 +96,15 @@ namespace FarLink.Metadata
                 }
             }
         }
-        
+
+
+        public IEnumerable<T> GetTypeAttributes<T>(Type type) where T : Attribute
+        {
+            var attr = typeof(T);
+            var attrs = _cache.GetOrAdd(type, GetMemberAttributes);
+            if (!attrs.TryGetValue(attr, out var lst) || lst.Count == 0) return Enumerable.Empty<T>();
+            return lst.Cast<T>();
+        }
 
         public T GetEventAttribute<T>(Type type) where T : Attribute
         {
@@ -135,7 +144,7 @@ namespace FarLink.Metadata
                         .SingleOrDefault(p => typeof(IEvent).IsAssignableFrom(p) && p != typeof(IEvent)) ??
                     typeof(IEvent)
                 );
-                return masterEvent != typeof(IEvent) ? GetEventAttributes<T>(masterEvent) : null;
+                return masterEvent != typeof(IEvent) ? GetEventAttributes<T>(masterEvent) : Enumerable.Empty<T>();
             }
             
             return lst.Cast<T>();
@@ -161,14 +170,8 @@ namespace FarLink.Metadata
                     var uAttr = aType.GetCustomAttribute<AttributeUsageAttribute>();
                     if (uAttr.AllowMultiple)
                         return ImmutableList.CreateRange(p);
-                    else
-                    {
-                        var last = p.LastOrDefault();
-                        if (last == null)
-                            return ImmutableList.CreateRange(Enumerable.Empty<Attribute>());
-                        else
-                            return ImmutableList.CreateRange(new[] {last});
-                    }
+                    var last = p.LastOrDefault();
+                    return ImmutableList.CreateRange(last == null ? Enumerable.Empty<Attribute>() : new[] {last});
                 });
 
             var fromAttr = member.GetCustomAttributes()

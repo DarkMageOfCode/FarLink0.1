@@ -15,7 +15,7 @@ namespace FarLink.RabbitMq
 {
     internal class RabbitFarLink : IRabbitFarLink, IDisposable
     {
-        private readonly ISerializer _serializer;
+        private readonly ISerializationService _serializationService;
         private readonly IMetaInfoCache _infoCache;
         public ILog Logger { get; }
         public ILink Link { get; }
@@ -26,7 +26,7 @@ namespace FarLink.RabbitMq
         private readonly bool _ownLink;
 
         // ReSharper disable once SuggestBaseTypeForParameter
-        public RabbitFarLink(RabbitConfig config, ILog<RabbitFarLink> logger, IMetaInfoCache infoCache, ISerializer serializer)
+        public RabbitFarLink(RabbitConfig config, ILog<RabbitFarLink> logger, IMetaInfoCache infoCache, ISerializationService serializationService)
             : this(LinkBuilder
                 .Configure
                 .AppId(config.AppId)
@@ -37,13 +37,13 @@ namespace FarLink.RabbitMq
                 .Timeout(config.Timeout)
                 .Uri(config.Uri)
                 .UseBackgroundThreadsForConnection(config.UseBackgroundThreadsForConnection)
-                .Build(), config.AppId, logger, infoCache, serializer)
+                .Build(), config.AppId, logger, infoCache, serializationService)
         {
-            _serializer = serializer;
+            _serializationService = serializationService;
             _ownLink = true;
         }
 
-        public RabbitFarLink(ILink link, string appId, ILog<RabbitFarLink> logger, IMetaInfoCache infoCache, ISerializer serializer)
+        public RabbitFarLink(ILink link, string appId, ILog<RabbitFarLink> logger, IMetaInfoCache infoCache, ISerializationService serializationService)
         {
             if (string.IsNullOrWhiteSpace(appId))
                 throw new ArgumentException("Value cannot be null or whitespace.", nameof(appId));
@@ -57,7 +57,7 @@ namespace FarLink.RabbitMq
 
         public IEventPublisher<TEvent> MakePublisher<TEvent>() where TEvent : IEvent
         {
-            return new EventPublisher<TEvent>(_producerDictionary, _serializer, _infoCache, true, null, LinkDeliveryMode.Persistent,
+            return new EventPublisher<TEvent>(_producerDictionary, _serializationService, _infoCache, true, null, LinkDeliveryMode.Persistent,
                 Timeout.InfiniteTimeSpan, null, null);
         }
 

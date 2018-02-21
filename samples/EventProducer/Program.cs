@@ -36,11 +36,10 @@ namespace EventProducer
                     outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}:{SourceContext}] {Message:lj} {NewLine}{Properties:j}{NewLine}{Exception}")
                 .CreateLogger();
 
-            var sc = new ServiceCollection()
+            var sc = new FarLink.FarLink()
                 .AddLogging(builder => builder.AddSerilog())
-                .AddFarLinkLogging()
-                .UseMetadata()
-                .AddSerializer(new FarLinkJsonSerializer())
+                .UseSerializer(bld => bld.AddJson())
+                .Prepare()
                 .AddRabbitFarLink(cfg => cfg.Uri("amqp://youdo:youdo@localhost"))
                 .AddEvent<MyEvent>();
 

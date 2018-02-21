@@ -17,7 +17,7 @@ namespace FarLink.RabbitMq.Internals
         where TEvent : IEvent
     {
         private readonly ProducerDictionary _producers;
-        private readonly ISerializer _serializer;
+        private readonly ISerializationService _serializationService;
         private readonly IMetaInfoCache _metaInfo;
         private readonly bool _confirmsMode;
         private readonly string _correlationId;
@@ -26,11 +26,11 @@ namespace FarLink.RabbitMq.Internals
         private readonly LinkDeliveryMode _deliveryMode;
         private readonly TimeSpan _timeout;
 
-        public EventPublisher(ProducerDictionary producers, ISerializer serializer, IMetaInfoCache metaInfo,
+        public EventPublisher(ProducerDictionary producers, ISerializationService serializationService, IMetaInfoCache metaInfo,
             bool confirmsMode, TimeSpan? messageTtl, LinkDeliveryMode deliveryMode, TimeSpan timeout, string correlationId, string messageId)
         {
             _producers = producers ?? throw new ArgumentNullException(nameof(producers));
-            _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
+            _serializationService = serializationService ?? throw new ArgumentNullException(nameof(serializationService));
             _metaInfo = metaInfo ?? throw new ArgumentNullException(nameof(metaInfo));
             _confirmsMode = confirmsMode;
             _messageTtl = messageTtl;
@@ -41,24 +41,24 @@ namespace FarLink.RabbitMq.Internals
         }
 
         public IEventPublisher<TEvent> MessageId(string messageId)
-            => new EventPublisher<TEvent>(_producers, _serializer, _metaInfo, _confirmsMode, _messageTtl, _deliveryMode,
+            => new EventPublisher<TEvent>(_producers, _serializationService, _metaInfo, _confirmsMode, _messageTtl, _deliveryMode,
                 _timeout, _correlationId, messageId);
             
 
         public IEventPublisher<TEvent>  CorrelationId(string correlationId)
-            => new EventPublisher<TEvent>(_producers, _serializer, _metaInfo, _confirmsMode, _messageTtl, _deliveryMode, _timeout,
+            => new EventPublisher<TEvent>(_producers, _serializationService, _metaInfo, _confirmsMode, _messageTtl, _deliveryMode, _timeout,
                 correlationId, _messageId);
         
         public IEventPublisher<TEvent>  Persistent(bool persistent)
-            => new EventPublisher<TEvent>(_producers, _serializer, _metaInfo, _confirmsMode, _messageTtl, persistent ? LinkDeliveryMode.Persistent : LinkDeliveryMode.Transient, _timeout,
+            => new EventPublisher<TEvent>(_producers, _serializationService, _metaInfo, _confirmsMode, _messageTtl, persistent ? LinkDeliveryMode.Persistent : LinkDeliveryMode.Transient, _timeout,
                 _correlationId, _messageId);
         
         public IEventPublisher<TEvent> ConfirmPublish(bool confirmPublish)
-            => new EventPublisher<TEvent>(_producers, _serializer, _metaInfo, confirmPublish, _messageTtl, _deliveryMode, _timeout,
+            => new EventPublisher<TEvent>(_producers, _serializationService, _metaInfo, confirmPublish, _messageTtl, _deliveryMode, _timeout,
                 _correlationId, _messageId);
 
         public IEventPublisher<TEvent> MessageTtl(TimeSpan? messageTtl)
-            => new EventPublisher<TEvent>(_producers, _serializer, _metaInfo, _confirmsMode,
+            => new EventPublisher<TEvent>(_producers, _serializationService, _metaInfo, _confirmsMode,
                 messageTtl > TimeSpan.Zero
                     ? messageTtl
                     : throw new ArgumentOutOfRangeException(nameof(messageTtl), messageTtl,
@@ -66,7 +66,7 @@ namespace FarLink.RabbitMq.Internals
                 _correlationId, _messageId);
         
         public IEventPublisher<TEvent> Timeout(TimeSpan timeout)
-            => new EventPublisher<TEvent>(_producers, _serializer, _metaInfo, _confirmsMode, _messageTtl, _deliveryMode, timeout,
+            => new EventPublisher<TEvent>(_producers, _serializationService, _metaInfo, _confirmsMode, _messageTtl, _deliveryMode, timeout,
                 _correlationId, _messageId);
         
 
@@ -90,7 +90,7 @@ namespace FarLink.RabbitMq.Internals
             if(contentTypes == null || contentTypes.Count == 0 )
                 throw new MissingMetadataException(
                     $"For event {eventType} attribute {typeof(ContentTypeAttribute)} not found");
-            var serialized = _serializer.Serialize(message, contentTypes[0].ContentType,
+            var serialized = _serializationService.Serialize(message, contentTypes[0].ContentType,
                 contentTypes.Skip(1).Select(p => p.ContentType).ToArray());
 
             var producer = _producers.GetOrAdd(new ExchangeDesc(exchAttr), _confirmsMode, false);
