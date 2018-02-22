@@ -5,17 +5,17 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace FarLink.Serialization
 {
-    public class SerializationBuilder
+    internal class SerializationBuilder : ISerializationBuilder
     {
         private readonly List<Func<IServiceProvider, ISerializer>> _factories = new List<Func<IServiceProvider, ISerializer>>();
 
-        public SerializationBuilder Clear()
+        public ISerializationBuilder Clear()
         {
             _factories.Clear();
             return this;
         }
 
-        public SerializationBuilder Add(Func<IServiceProvider, ISerializer> factory)
+        public ISerializationBuilder Add(Func<IServiceProvider, ISerializer> factory)
         {
             _factories.Add(factory);
             return this;

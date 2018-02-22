@@ -8,10 +8,10 @@ namespace FarLink.Serialization
 {
     public class MetadataEncoding : ITypeEncoding
     {
-        private readonly IMetaInfoCache _meta;
+        private readonly IMetadataCache _meta;
         private readonly ConcurrentDictionary<string, Type> _decodeDict = new ConcurrentDictionary<string, Type>();
 
-        public MetadataEncoding(IMetaInfoCache meta)
+        public MetadataEncoding(IMetadataCache meta)
         {
             _meta = meta;
         }

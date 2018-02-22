@@ -5,7 +5,7 @@ namespace FarLink.Json
 {
     public static class Extensions
     {
-        public static SerializationBuilder AddJson(this SerializationBuilder builder,
+        public static ISerializationBuilder AddJson(this ISerializationBuilder builder,
             JsonSerializerSettings settings = null)
             => builder.Add(_ => new FarLinkJsonSerializer(settings));
     }

@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace FarLink.Serialization
 {
-    public class TypeEncodingBuilder
+    internal class TypeEncodingBuilder : ITypeEncodingBuilder
     {
         private readonly List<Func<IServiceProvider, ITypeEncoding>> _encodings = new List<Func<IServiceProvider, ITypeEncoding>>();
         private bool _strict = false;
@@ -16,13 +16,13 @@ namespace FarLink.Serialization
         }
 
 
-        public TypeEncodingBuilder Clear()
+        public ITypeEncodingBuilder Clear()
         {
             _encodings.Clear();
             return this;
         }
 
-        public TypeEncodingBuilder Add(Func<IServiceProvider, ITypeEncoding> encodingFactory)
+        public ITypeEncodingBuilder Add(Func<IServiceProvider, ITypeEncoding> encodingFactory)
         {
             _encodings.Add(encodingFactory);
             return this;
@@ -30,7 +30,7 @@ namespace FarLink.Serialization
 
         
 
-        public TypeEncodingBuilder Strict(bool strict)
+        public ITypeEncodingBuilder Strict(bool strict)
         {
             _strict = strict;
             return this;

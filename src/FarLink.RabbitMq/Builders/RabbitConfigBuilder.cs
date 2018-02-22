@@ -4,7 +4,7 @@ using FarLink.RabbitMq.Configuration;
 
 namespace FarLink.RabbitMq.Builders
 {
-    public class RabbitConfigBuilder
+    internal class RabbitConfigBuilder : IRabbitConfigBuilder
     {
         private string _appId;
         private string _connectionName;
@@ -23,7 +23,7 @@ namespace FarLink.RabbitMq.Builders
             _useBackgroundThreadsForConnection = true;
         }
 
-        public RabbitConfigBuilder AppId(string appId)
+        public IRabbitConfigBuilder AppId(string appId)
         {
             if (string.IsNullOrWhiteSpace(appId))
                 throw new ArgumentException("Value cannot be null or whitespace.", nameof(appId));
@@ -31,7 +31,7 @@ namespace FarLink.RabbitMq.Builders
             return this;
         }
 
-        public RabbitConfigBuilder ConnectionName(string connectionName)
+        public IRabbitConfigBuilder ConnectionName(string connectionName)
         {
             if (string.IsNullOrWhiteSpace(connectionName))
                 throw new ArgumentException("Value cannot be null or whitespace.", nameof(connectionName));
@@ -39,7 +39,7 @@ namespace FarLink.RabbitMq.Builders
             return this;
         }
 
-        public RabbitConfigBuilder RecoveryInterval(TimeSpan recoveryInterval)
+        public IRabbitConfigBuilder RecoveryInterval(TimeSpan recoveryInterval)
         {
             if(recoveryInterval <= TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException(nameof(recoveryInterval), recoveryInterval, "Recovery interval must be positive");
@@ -47,7 +47,7 @@ namespace FarLink.RabbitMq.Builders
             return this;
         }
         
-        public RabbitConfigBuilder RecoveryInterval(int recoveryInterval)
+        public IRabbitConfigBuilder RecoveryInterval(int recoveryInterval)
         {
             if(recoveryInterval <= 0)
                 throw new ArgumentOutOfRangeException(nameof(recoveryInterval), recoveryInterval, "Recovery interval must be positive");
@@ -55,7 +55,7 @@ namespace FarLink.RabbitMq.Builders
             return this;
         }
 
-        public RabbitConfigBuilder Timeout(TimeSpan timeout)
+        public IRabbitConfigBuilder Timeout(TimeSpan timeout)
         {
             if(timeout <= TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException(nameof(timeout), timeout, "Timeout must be positive");
@@ -63,7 +63,7 @@ namespace FarLink.RabbitMq.Builders
             return this;
         }
         
-        public RabbitConfigBuilder Timeout(int timeout)
+        public IRabbitConfigBuilder Timeout(int timeout)
         {
             if(timeout <= 0)
                 throw new ArgumentOutOfRangeException(nameof(timeout), timeout, "Timeout must be positive");
@@ -71,7 +71,7 @@ namespace FarLink.RabbitMq.Builders
             return this;
         }
 
-        public RabbitConfigBuilder Uri(Uri uri)
+        public IRabbitConfigBuilder Uri(Uri uri)
         {
             if (uri == null) throw new ArgumentNullException(nameof(uri));
             if(uri.Scheme != "amqp" && uri.Scheme != "amqps")
@@ -80,14 +80,14 @@ namespace FarLink.RabbitMq.Builders
             return this;
         }
         
-        public RabbitConfigBuilder Uri(string uri)
+        public IRabbitConfigBuilder Uri(string uri)
         {
             if (uri == null) throw new ArgumentNullException(nameof(uri));
             var ur = new Uri(uri);
             return Uri(ur);
         }
 
-        public RabbitConfigBuilder UseBackgroundThreadsForConnection(bool useBackgroundThread)
+        public IRabbitConfigBuilder UseBackgroundThreadsForConnection(bool useBackgroundThread)
         {
             _useBackgroundThreadsForConnection = useBackgroundThread;
             return this;

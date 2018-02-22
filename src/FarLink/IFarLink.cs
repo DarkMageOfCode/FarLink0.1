@@ -7,9 +7,10 @@ namespace FarLink
 {
     public interface IFarLink
     {
-        IFarLink UseTypeEncoding(Action<TypeEncodingBuilder> configure);
-        IFarLink UseSerializer(Action<SerializationBuilder> configure);
+        IFarLink UseTypeEncoding(Action<ITypeEncodingBuilder> configure);
+        IFarLink UseSerializer(Action<ISerializationBuilder> configure);
         IFarLink AddLogging(Action<ILoggingBuilder> builder);
         IServiceCollection Prepare(IServiceCollection collection = null);
+        IFarLink ConfigureServices(Action<IServiceCollection> configurer);
     }
 }

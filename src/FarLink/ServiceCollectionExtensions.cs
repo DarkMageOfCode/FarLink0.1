@@ -18,7 +18,7 @@ namespace FarLink
 
         public static IServiceCollection UseMetadata(this IServiceCollection registrations)
         {
-            registrations.TryAddSingleton<IMetaInfoCache>(new MetaInfoCache());
+            registrations.TryAddSingleton<IMetadataCache>(new MetadataCache());
             return registrations;
         }
 

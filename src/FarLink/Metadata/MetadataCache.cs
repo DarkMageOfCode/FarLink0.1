@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -10,19 +9,7 @@ using FarLink.Markup;
 
 namespace FarLink.Metadata
 {
-    public interface IMetaInfoCache
-    {
-        T GetEventAttribute<T>(Type type) where T : Attribute;
-        IEnumerable<T> GetEventAttributes<T>(Type type) where T : Attribute;
-        IEnumerable<T> GetTypeAttributes<T>(Type type) where T : Attribute;
-    }
-
-    public interface IMetaCacheConfig
-    {
-        
-    }
-
-    internal class MetaInfoCache : IMetaInfoCache
+    internal class MetadataCache : IMetadataCache
     {
         private readonly List<Func<MemberInfo, IEnumerable<Attribute>>> _convention =
             new List<Func<MemberInfo, IEnumerable<Attribute>>>();
@@ -150,6 +137,11 @@ namespace FarLink.Metadata
             return lst.Cast<T>();
         }
 
+        public IEnumerable<T> GetMethodAttribute<T>(MethodInfo methodInfo) where T : Attribute
+        {
+            var attrs = 
+        }
+
 
         public bool IsLocked => Interlocked.CompareExchange(ref _locked, 0, 0) == 0;
 
@@ -188,5 +180,4 @@ namespace FarLink.Metadata
             return attributes;
         }
     }
-
 }

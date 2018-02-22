@@ -39,9 +39,8 @@ namespace EventProducer
             var sc = new FarLink.FarLink()
                 .AddLogging(builder => builder.AddSerilog())
                 .UseSerializer(bld => bld.AddJson())
-                .Prepare()
-                .AddRabbitFarLink(cfg => cfg.Uri("amqp://youdo:youdo@localhost"))
-                .AddEvent<MyEvent>();
+                .AddRabbitMq(cfg => cfg.Uri("amqp://youdo:youdo@localhost"), builder => { builder.AddPublisher<MyEvent>(); })
+                .Prepare();
 
             var containerBuilder = new ContainerBuilder();
             containerBuilder.Populate(sc);
