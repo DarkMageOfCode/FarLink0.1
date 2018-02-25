@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Threading;
+using FarLink.Markup.RabbitMq;
 using RabbitLink;
 using RabbitLink.Producer;
 
@@ -17,12 +18,12 @@ namespace FarLink.RabbitMq.Utilites
             _link = link;
         }
 
-        private readonly ConcurrentDictionary<(string, bool), (ExchangeDesc, ILinkProducer)> _dictionary =
-            new ConcurrentDictionary<(string, bool), (ExchangeDesc, ILinkProducer)>();
+        private readonly ConcurrentDictionary<(string, bool), (ExchangeAttribute, ILinkProducer)> _dictionary =
+            new ConcurrentDictionary<(string, bool), (ExchangeAttribute, ILinkProducer)>();
 
         public bool Disposed => Interlocked.CompareExchange(ref _disposed, 0, 0) != 0;
         
-        public ILinkProducer GetOrAdd(ExchangeDesc desc, bool confirmsMode, bool passive)
+        public ILinkProducer GetOrAdd(ExchangeAttribute desc, bool confirmsMode, bool passive)
         {
             if(Disposed) 
                 throw new ObjectDisposedException(nameof(ProducerDictionary));
@@ -39,8 +40,8 @@ namespace FarLink.RabbitMq.Utilites
                             ? cfg.ExchangeDeclareDefault()
                             : passive
                                 ? cfg.ExchangeDeclarePassive(desc.Name)
-                                : cfg.ExchangeDeclare(desc.Name, desc.Type, desc.Durable, desc.AutoDelete,
-                                    desc.Alternate, desc.Delayed))
+                                : cfg.ExchangeDeclare(desc.Name, 
+                                    desc.Kind.ToLink(), desc.Durable, desc.AutoDelete))
                         .ConfirmsMode(confirmsMode)
                         .Build();
                     return (desc, newProducer);

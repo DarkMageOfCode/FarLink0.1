@@ -4,11 +4,11 @@ using Autofac.Extensions.DependencyInjection;
 using FarLink;
 using FarLink.Eventing;
 using FarLink.Json;
-using FarLink.Logging;
 using FarLink.Markup;
 using FarLink.Markup.RabbitMq;
 using FarLink.RabbitMq;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Core;
 using Serilog.Sinks.SystemConsole.Themes;
@@ -39,7 +39,7 @@ namespace EventProducer
             var sc = new FarLink.FarLink()
                 .AddLogging(builder => builder.AddSerilog())
                 .UseSerializer(bld => bld.AddJson())
-                .AddRabbitMq(cfg => cfg.Uri("amqp://youdo:youdo@localhost"), builder => { builder.AddPublisher<MyEvent>(); })
+                .AddRabbitMq(cfg => cfg.Uri("amqp://localhost"), builder => { builder.AddPublisher<MyEvent>(); })
                 .Prepare();
 
             var containerBuilder = new ContainerBuilder();
@@ -48,8 +48,9 @@ namespace EventProducer
             {
 
                 var rootProvider = new AutofacServiceProvider(container);
-                var logger = rootProvider.GetService<ILog<Program>>();
-                logger.With("@Value", new { Name ="Test", Id = 5 }).Info("Service {SourceContext} started!");
+                var logger = rootProvider.GetService<ILogger<Program>>();
+                using(logger.BeginScope("{@Value}", new { Name ="Test", Id = 5 })) 
+                    logger.LogInformation("Service {SourceContext} started!");
                 var rfl = rootProvider.GetService<IRabbitFarLink>();
                 var publisher = rootProvider.GetService<IEventPublisher<MyEvent>>();
                 publisher.PublishAsync(new MyEvent("Hellow, World!")).GetAwaiter().GetResult();

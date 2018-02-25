@@ -137,9 +137,16 @@ namespace FarLink.Metadata
             return lst.Cast<T>();
         }
 
-        public IEnumerable<T> GetMethodAttribute<T>(MethodInfo methodInfo) where T : Attribute
+        public T GetMethodAttribute<T>(MethodInfo methodInfo) where T : Attribute
         {
-            var attrs = 
+            if (methodInfo == null) throw new ArgumentNullException(nameof(methodInfo));
+            var attr = typeof(T);
+            var attrs = _cache.GetOrAdd(methodInfo, GetMemberAttributes);
+            if (!attrs.TryGetValue(attr, out var lst) || lst.Count == 0)
+                return null;
+            if (lst.Count > 1)
+                throw new InvalidOperationException($"More then one {attr} specified for {methodInfo}");
+            return (T) lst[0];
         }
 
 

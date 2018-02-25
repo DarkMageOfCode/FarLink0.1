@@ -4,7 +4,7 @@ using FarLink.RabbitMq.Configuration;
 
 namespace FarLink.RabbitMq.Builders
 {
-    internal class RabbitConfigBuilder : IRabbitConfigBuilder
+    internal class RabbitConnectionBuilder : IRabbitConnectionBuilder
     {
         private string _appId;
         private string _connectionName;
@@ -13,7 +13,7 @@ namespace FarLink.RabbitMq.Builders
         private Uri _uri;
         private bool _useBackgroundThreadsForConnection;
 
-        internal RabbitConfigBuilder()
+        internal RabbitConnectionBuilder()
         {
             _appId = "FarLink";
             _connectionName = Assembly.GetEntryAssembly()?.FullName ?? "FarLink";
@@ -23,7 +23,7 @@ namespace FarLink.RabbitMq.Builders
             _useBackgroundThreadsForConnection = true;
         }
 
-        public IRabbitConfigBuilder AppId(string appId)
+        public IRabbitConnectionBuilder AppId(string appId)
         {
             if (string.IsNullOrWhiteSpace(appId))
                 throw new ArgumentException("Value cannot be null or whitespace.", nameof(appId));
@@ -31,7 +31,7 @@ namespace FarLink.RabbitMq.Builders
             return this;
         }
 
-        public IRabbitConfigBuilder ConnectionName(string connectionName)
+        public IRabbitConnectionBuilder ConnectionName(string connectionName)
         {
             if (string.IsNullOrWhiteSpace(connectionName))
                 throw new ArgumentException("Value cannot be null or whitespace.", nameof(connectionName));
@@ -39,7 +39,7 @@ namespace FarLink.RabbitMq.Builders
             return this;
         }
 
-        public IRabbitConfigBuilder RecoveryInterval(TimeSpan recoveryInterval)
+        public IRabbitConnectionBuilder RecoveryInterval(TimeSpan recoveryInterval)
         {
             if(recoveryInterval <= TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException(nameof(recoveryInterval), recoveryInterval, "Recovery interval must be positive");
@@ -47,7 +47,7 @@ namespace FarLink.RabbitMq.Builders
             return this;
         }
         
-        public IRabbitConfigBuilder RecoveryInterval(int recoveryInterval)
+        public IRabbitConnectionBuilder RecoveryInterval(int recoveryInterval)
         {
             if(recoveryInterval <= 0)
                 throw new ArgumentOutOfRangeException(nameof(recoveryInterval), recoveryInterval, "Recovery interval must be positive");
@@ -55,7 +55,7 @@ namespace FarLink.RabbitMq.Builders
             return this;
         }
 
-        public IRabbitConfigBuilder Timeout(TimeSpan timeout)
+        public IRabbitConnectionBuilder Timeout(TimeSpan timeout)
         {
             if(timeout <= TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException(nameof(timeout), timeout, "Timeout must be positive");
@@ -63,7 +63,7 @@ namespace FarLink.RabbitMq.Builders
             return this;
         }
         
-        public IRabbitConfigBuilder Timeout(int timeout)
+        public IRabbitConnectionBuilder Timeout(int timeout)
         {
             if(timeout <= 0)
                 throw new ArgumentOutOfRangeException(nameof(timeout), timeout, "Timeout must be positive");
@@ -71,7 +71,7 @@ namespace FarLink.RabbitMq.Builders
             return this;
         }
 
-        public IRabbitConfigBuilder Uri(Uri uri)
+        public IRabbitConnectionBuilder Uri(Uri uri)
         {
             if (uri == null) throw new ArgumentNullException(nameof(uri));
             if(uri.Scheme != "amqp" && uri.Scheme != "amqps")
@@ -80,14 +80,14 @@ namespace FarLink.RabbitMq.Builders
             return this;
         }
         
-        public IRabbitConfigBuilder Uri(string uri)
+        public IRabbitConnectionBuilder Uri(string uri)
         {
             if (uri == null) throw new ArgumentNullException(nameof(uri));
             var ur = new Uri(uri);
             return Uri(ur);
         }
 
-        public IRabbitConfigBuilder UseBackgroundThreadsForConnection(bool useBackgroundThread)
+        public IRabbitConnectionBuilder UseBackgroundThreadsForConnection(bool useBackgroundThread)
         {
             _useBackgroundThreadsForConnection = useBackgroundThread;
             return this;

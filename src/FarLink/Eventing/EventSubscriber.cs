@@ -17,15 +17,13 @@ namespace FarLink.Eventing
         string SenderId { get; }
     }
 
-    public interface ITransportEventSubscriber
+    public interface IEventTransportSubscriber<T>
     {
-        Type EventType { get; }
-        MethodInfo MethodInfo { get; }
-        Task Handle(object message, CancellationToken cancellation);
+        Task Handle(T message, IEventContext context, CancellationToken cancellation);
     }
 
     public interface IEventTransport
     {
-        IDisposable Subscribe(ITransportEventSubscriber subscriber);
+        IDisposable Subscribe<T>(IEventTransportSubscriber<T> subscriber, MethodInfo methodInfo);
     }
 }

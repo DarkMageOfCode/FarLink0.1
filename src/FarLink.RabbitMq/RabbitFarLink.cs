@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Immutable;
+using System.Net.Mime;
+using System.Reflection;
 using System.Threading;
 using FarLink.Eventing;
-using FarLink.Logging;
 using FarLink.Markup;
 using FarLink.Markup.RabbitMq;
 using FarLink.Metadata;
@@ -9,16 +11,19 @@ using FarLink.RabbitMq.Configuration;
 using FarLink.RabbitMq.Internals;
 using FarLink.RabbitMq.Utilites;
 using FarLink.Serialization;
+using Microsoft.Extensions.Logging;
 using RabbitLink;
+using RabbitLink.Consumer;
 using RabbitLink.Messaging;
 
 namespace FarLink.RabbitMq
 {
     internal class RabbitFarLink : IRabbitFarLink, IDisposable, IEventTransport
     {
+        private readonly ILoggerFactory _loggerFactory;
         private readonly ISerializationService _serializationService;
         private readonly IMetadataCache _infoCache;
-        public ILog Logger { get; }
+        public ILogger Logger { get; }
         public ILink Link { get; }
         public string AppId { get; }
         
@@ -27,29 +32,31 @@ namespace FarLink.RabbitMq
         private readonly bool _ownLink;
 
         // ReSharper disable once SuggestBaseTypeForParameter
-        public RabbitFarLink(RabbitConfig config, ILog<RabbitFarLink> logger, IMetadataCache infoCache, ISerializationService serializationService)
+        public RabbitFarLink(RabbitConfig config, ILoggerFactory loggerFactory, IMetadataCache infoCache, ISerializationService serializationService)
             : this(LinkBuilder
                 .Configure
                 .AppId(config.AppId)
                 .AutoStart(true)
                 .ConnectionName(config.ConnectionName)
-                .LoggerFactory(new LinkLogFactory(logger))
+                .LoggerFactory(new LinkLogFactory(loggerFactory))
                 .RecoveryInterval(config.RecoveryInterval)
                 .Timeout(config.Timeout)
                 .Uri(config.Uri)
                 .UseBackgroundThreadsForConnection(config.UseBackgroundThreadsForConnection)
-                .Build(), config.AppId, logger, infoCache, serializationService)
+                .Build(), config.AppId, loggerFactory, infoCache, serializationService)
         {
-            _serializationService = serializationService;
-            _ownLink = true;
+            
+            
         }
 
-        public RabbitFarLink(ILink link, string appId, ILog<RabbitFarLink> logger, IMetadataCache infoCache, ISerializationService serializationService)
+        public RabbitFarLink(ILink link, string appId, ILoggerFactory loggerFactory, IMetadataCache infoCache, ISerializationService serializationService)
         {
             if (string.IsNullOrWhiteSpace(appId))
                 throw new ArgumentException("Value cannot be null or whitespace.", nameof(appId));
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
             _infoCache = infoCache ?? throw new ArgumentNullException(nameof(infoCache));
-            Logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _serializationService = serializationService;
+            Logger = loggerFactory.CreateLogger<RabbitFarLink>();
             Link = link;
             AppId = appId;
             _producerDictionary = new ProducerDictionary(Link);
@@ -58,48 +65,102 @@ namespace FarLink.RabbitMq
 
         public IEventPublisher<TEvent> MakePublisher<TEvent>() where TEvent : IEvent
         {
-            return new EventPublisher<TEvent>(_producerDictionary, _serializationService, _infoCache, true, null, LinkDeliveryMode.Persistent,
+            Logger.LogTrace("Making publisher for event type {EventType}", typeof(TEvent));
+            return new EventPublisher<TEvent>(_loggerFactory.CreateLogger<EventPublisher<TEvent>>(), _producerDictionary, _serializationService, _infoCache, true, null, LinkDeliveryMode.Persistent,
                 Timeout.InfiniteTimeSpan, null, null);
         }
 
         public object MakePublisher(Type eventType)
         {
+            Logger.LogTrace("Making publisher for event type {EventType}", eventType);
             var publisherType = typeof(EventPublisher<>).MakeGenericType(eventType);
 
-            return Activator.CreateInstance(publisherType, _producerDictionary, _serializationService, _infoCache, true,
+            return Activator.CreateInstance(publisherType,_loggerFactory.CreateLogger(eventType.FullName),  _producerDictionary, _serializationService, _infoCache, true,
                 null, LinkDeliveryMode.Persistent, Timeout.InfiniteTimeSpan, null, null);
         }
 
-        public IDisposable Subscribe(ITransportEventSubscriber subscriber)
+        public IDisposable Subscribe<T>(IEventTransportSubscriber<T> subscriber, MethodInfo methodInfo)
         {
-            if (!Included(subscriber)) return null;
-            var exchange = _infoCache.GetEventAttribute<ExchangeAttribute>(subscriber.EventType);
-
-            if (exchange == null)
+            using (Logger.BeginScope("{EventType} {SubscriberType} {MethodName}", typeof(T), methodInfo.ReflectedType, methodInfo.Name))
             {
-                Logger.With("EventType", subscriber.EventType).Warn("Exchange attribute not found");
-                return null;
-            }
 
-            string routingKey;
-            if (exchange.Kind != ExchangeKind.Fanout)
-            {
-                routingKey = _infoCache.GetEventAttribute<RoutingKeyAttribute>(subscriber.EventType)?.Key;
-                if (routingKey == null)
+                if (!Included(typeof(T), methodInfo)) return null;
+                var exchange = _infoCache.GetEventAttribute<ExchangeAttribute>(typeof(T));
+
+                if (exchange == null)
                 {
-                    Logger.With("EventType", subscriber.EventType).Error("Routing key attribute not found");
-                    throw new MissingMetadataException($"No routing key for {subscriber.EventType} specified");
+                        Logger.LogWarning("Exchange attribute for {EventType} `not found");
+                    return null;
                 }
+
+                string routingKey = null;
+                if (exchange.Kind != ExchangeKind.Fanout)
+                {
+                    routingKey = _infoCache.GetEventAttribute<RoutingKeyAttribute>(typeof(T))?.Key;
+                    if (routingKey == null)
+                    {
+
+                        Logger.LogError("Routing key attribute not found");
+                        throw new MissingMetadataException($"No routing key for {typeof(T)} specified");
+                    }
+                }
+
+                var queue = _infoCache.GetMethodAttribute<QueueAttribute>(methodInfo);
+                if (queue == null)
+                {
+                    Logger.LogError("Queue for {EventType} on {SubscriberType}.{MethodName} bot specified");
+                    
+                    throw new MissingMetadataException($"No routing key for {typeof(T)} not specified");
+                }
+
+                return Link
+                    .Consumer
+                    .Queue(async cfg =>
+                    {
+                        var exch = exchange.Name == ""
+                            ? await cfg.ExchangeDeclareDefault()
+                            : await cfg.ExchangeDeclare(exchange.Name,
+                                exchange.Kind.ToLink(), exchange.Durable, exchange.AutoDelete);
+                        var que = await cfg.QueueDeclare(queue.Name, queue.Durable);
+                        if (exchange.Kind == ExchangeKind.Fanout)
+                            await cfg.Bind(que, exch);
+                        else
+                            await cfg.Bind(que, exch, routingKey);
+                        return que;
+
+                    })
+                    .Handler<byte[]>(async msg =>
+                    {
+                        try
+                        {
+                            _serializationService.Deserialize(
+                                new Serialized(msg.Body, new ContentType(msg.Properties.ContentType),
+                                    msg.Properties.Type),
+                                ImmutableDictionary<string, object>.Empty,
+                                typeof(T));
+
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogError(0, ex, "Error handle message");
+                            return LinkConsumerAckStrategy.Nack;
+                        }
+
+                        
+                        
+                        return LinkConsumerAckStrategy.Ack;
+                    })
+                    .Build();
+                    
+
+
+                
+
             }
-            
-            var queue = _infoCache.Get
-            if()
-
-
 
         }
 
-        private bool Included(ITransportEventSubscriber subscriber)
+        private bool Included(Type eventType, MethodInfo methodInfo)
         {
             throw new NotImplementedException();
         }

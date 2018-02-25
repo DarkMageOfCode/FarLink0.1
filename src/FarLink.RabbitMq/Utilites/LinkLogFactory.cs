@@ -1,50 +1,55 @@
 ﻿using System;
-using FarLink.Logging;
+using Microsoft.Extensions.Logging;
 using RabbitLink.Logging;
 
 namespace FarLink.RabbitMq.Utilites
 {
     internal class LinkLogFactory : ILinkLoggerFactory
     {
+        private readonly ILoggerFactory _factory;
         private const string RabbitLinkCategoryPropertyName = "RabbitLinkCategory";
         
-        private readonly ILog _logger;
+        
 
-        public LinkLogFactory(ILog logger)
+        public LinkLogFactory(ILoggerFactory factory)
         {
-            _logger = logger;
+            _factory = factory;
         }
 
 
         public ILinkLogger CreateLogger(string name)
         {
-            return new LinkLogger(_logger.With(RabbitLinkCategoryPropertyName, name));
+            
+            return new LinkLogger(_factory.CreateLogger<LinkLogFactory>(), name);
         }
         
         private class LinkLogger : ILinkLogger
         {
-            private readonly ILog _logger;
+            private readonly ILogger _logger;
+            private readonly string _category;
 
-            public LinkLogger(ILog logger)
+            public LinkLogger(ILogger logger, string category)
             {
                 _logger = logger;
+                _category = category;
             }
 
             public void Write(LinkLoggerLevel level, string message)
             {
+                using(_logger.BeginScope($"{{{RabbitLinkCategoryPropertyName}}}", _category))
                 switch (level)
                 {
                     case LinkLoggerLevel.Error:
-                        _logger.Error(message);
+                        _logger.LogError(message);
                         break;
                     case LinkLoggerLevel.Warning:
-                        _logger.Warn(message);
+                        _logger.LogWarning(message);
                         break;
                     case LinkLoggerLevel.Info:
-                        _logger.Info(message);
+                        _logger.LogInformation(message);
                         break;
                     case LinkLoggerLevel.Debug:
-                        _logger.Debug(message);
+                        _logger.LogDebug(message);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(level), level, null);

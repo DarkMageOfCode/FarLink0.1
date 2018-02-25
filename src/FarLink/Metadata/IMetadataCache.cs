@@ -10,6 +10,6 @@ namespace FarLink.Metadata
         T GetEventAttribute<T>(Type type) where T : Attribute;
         IEnumerable<T> GetEventAttributes<T>(Type type) where T : Attribute;
         IEnumerable<T> GetTypeAttributes<T>(Type type) where T : Attribute;
-        IEnumerable<T> GetMethodAttribute<T>(MethodInfo methodInfo) where T : Attribute;
+        T GetMethodAttribute<T>(MethodInfo methodInfo) where T : Attribute;
     }
 }

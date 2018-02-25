@@ -4,6 +4,7 @@ using System.Linq;
 using FarLink.Eventing;
 using FarLink.Markup;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace FarLink.RabbitMq.Builders
 {

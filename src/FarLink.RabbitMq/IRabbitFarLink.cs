@@ -1,12 +1,12 @@
 ﻿using System;
-using FarLink.Logging;
 using FarLink.RabbitMq.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace FarLink.RabbitMq
 {
     public interface IRabbitFarLink 
     {
         string AppId { get; }
-        ILog Logger { get; }
+        ILogger Logger { get; }
     }
 }

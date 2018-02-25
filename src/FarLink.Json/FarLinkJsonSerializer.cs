@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Net.Mime;
 using System.Text;
 using FarLink.Serialization;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 
 namespace FarLink.Json
@@ -21,28 +23,37 @@ namespace FarLink.Json
         public bool SupportContentType(ContentType contentType) 
             => contentType.MediaType == "application/json" || contentType.MediaType == "text/json";
 
-        public (byte[], ContentType) Serialize(object value, ContentType contentType)
+        public bool SupportBinding => true;
+
+        public (byte[], ContentType) Serialize(object value, IImmutableSet<string> skip, ContentType contentType)
         {
             var ct = contentType;
             if (!SupportContentType(contentType))
                 throw new UnknownContentTypeException(ct);
-            string text;
+            JToken json;
             try
             {
-                text = JsonConvert.SerializeObject(value, _settings);
+                json = JToken.FromObject(value, JsonSerializer.Create(_settings));
             }
             catch (Exception ex)
             {
                 throw new InvalidTypeException($"Cannot serialize {value?.GetType()}", ex);
             }
 
+            if (json is JObject jobj)
+            {
+                foreach (var propName in skip)
+                {
+                    jobj.Remove(propName);
+                }
+            }
             var charset = contentType.CharSet;
             if (string.IsNullOrWhiteSpace(charset)) charset = "utf-8";
             ct = new ContentType(contentType.ToString()) {CharSet = charset};
             try
             {
                 var encoding = Encoding.GetEncoding(charset);
-                return (encoding.GetBytes(text), ct);
+                return (encoding.GetBytes(json.ToString(_settings.Formatting, _settings.Converters.ToArray())), ct);
             }
             catch (Exception ex)
             {
@@ -50,7 +61,7 @@ namespace FarLink.Json
             }
         }
 
-        public object Deserialize(Serialized data, Type awaitedType)
+        public object Deserialize(Serialized data, IImmutableDictionary<string, object> enrich, Type awaitedType)
         {
             throw new NotImplementedException();
         }

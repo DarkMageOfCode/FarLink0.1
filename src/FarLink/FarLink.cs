@@ -53,8 +53,8 @@ namespace FarLink
             collection = collection ?? new ServiceCollection();
             collection.AddLogging(_loggingBuilder);
             collection
-                .UseMetadata()
-                .AddFarLinkLogging();
+                .UseMetadata();
+                
             _typeEncodingBuilder.Build(collection);
             _serializationBuilder.Build(collection);
             _configureServices(collection);
